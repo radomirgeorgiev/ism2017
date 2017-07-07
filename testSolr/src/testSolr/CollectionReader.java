@@ -35,22 +35,23 @@ import org.xml.sax.SAXException;
 
 public class CollectionReader {
 
-	private String path, str;
+	private String pathIn, pathOut, str;
 	private List<File> files;
 	private Stream<String> lines;
 	private Document doc;
 	private HashMap<String, String> myLinkedMap;
 
-	public CollectionReader(String path_) throws URISyntaxException, IOException {
-		this.path = path_;
-		// initFileStreamsForAllFiles(path);
+	public CollectionReader(String pathCollectionToRead_, String pathXMLCollectionToWrite_)
+			throws URISyntaxException, IOException {
+		this.pathIn = pathCollectionToRead_;
+		this.pathOut = pathXMLCollectionToWrite_;
 	}
 
 	public void initFileStreamsForAllFiles() throws URISyntaxException, IOException, XPathExpressionException,
 			SAXException, ParserConfigurationException {
 		// files = new ArrayList<File>();
 
-		File f = new File(path);
+		File f = new File(pathIn);
 		URI uri = f.toURI();
 		files = Files.walk(Paths.get(uri)).filter(Files::isRegularFile).map(Path::toFile).collect(Collectors.toList());
 
@@ -126,13 +127,13 @@ public class CollectionReader {
 			myLinkedMap.put(node.getNodeName(), node.getTextContent());
 
 		} else if (node.getNodeName().equals("TITLE")) {
-			if(myLinkedMap.containsKey(node.getNodeName())){
+			if (myLinkedMap.containsKey(node.getNodeName())) {
 				String temp = myLinkedMap.get(node.getNodeName());
-				temp += " "+node.getTextContent();
+				temp += " " + node.getTextContent();
 				myLinkedMap.put(node.getNodeName(), temp);
 			} else {
 				myLinkedMap.put(node.getNodeName(), node.getTextContent());
-			}			
+			}
 		} else if (node.getNodeName().equals("TEXT")) {
 			myLinkedMap.put(node.getNodeName(), node.getTextContent());
 
@@ -171,9 +172,7 @@ public class CollectionReader {
 		TransformerFactory transformerFactory = TransformerFactory.newInstance();
 		Transformer transformer = transformerFactory.newTransformer();
 		DOMSource source = new DOMSource(doc);
-		StreamResult result = new StreamResult(
-				new File("C:\\Users\\Nivelin Stoyanov\\Desktop\\Internet_Suchmashinen\\NewDocuments\\" + newDocumentName
-						+ ".xml"));
+		StreamResult result = new StreamResult(new File(pathOut + newDocumentName + ".xml"));
 
 		transformer.transform(source, result);
 

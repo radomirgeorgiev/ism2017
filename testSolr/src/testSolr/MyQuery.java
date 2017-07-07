@@ -12,7 +12,6 @@ public class MyQuery {
 	private SolrClient solr;
 
 	public MyQuery(String url) {
-
 		solr = new HttpSolrClient.Builder(url).build();
 	}
 

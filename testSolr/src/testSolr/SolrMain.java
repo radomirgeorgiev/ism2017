@@ -23,38 +23,66 @@ import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 
-public class Test {
+public class SolrMain {
 
-	private final String URL = "http://localhost:8983/solr/";
+	private String pathIn, pathOut, pathQuery;
+	private String urlSolr;
+	private int queryCase;
+	private boolean readCollection;
+	private boolean indexCollection;
+	private boolean doQuery;
+	private boolean reduceQrelsDE;
+	private boolean withPOS;
+
 	private String queryID;
 	private List<String> queryResult = new LinkedList<String>();
 	private String path1 = ".\\";
 	private Stream<String> lines;
 
-	public Test() throws Exception {
-		String path = "C:\\Users\\Nivelin Stoyanov\\Desktop\\Internet_Suchmashinen\\NewDocuments\\";
-		String queryMapPath = "C:\\Users\\Nivelin Stoyanov\\Desktop\\Internet_Suchmashinen\\Top-de03.txt";
+	public SolrMain(String pathCollectionToRead_, String pathXMLCollectionToWrite_, String pathQuery_, String urlSolr_,
+			int queryCase_, boolean readCollection_, boolean indexCollection_, boolean doQuery_, boolean reduceQrelsDE_,
+			boolean withPOS_) throws Exception {
 
-		// CollectionReader cr = new CollectionReader(path);
-		// cr.initFileStreamsForAllFiles();
-		// Initializer init = new Initializer(path);
-		// init.createCollection();
+		this.pathIn = pathCollectionToRead_;
+		this.pathOut = pathXMLCollectionToWrite_;
+		this.pathQuery = pathQuery_;
+		this.urlSolr = urlSolr_;
+		this.queryCase = queryCase_;
+		this.readCollection = readCollection_;
+		this.indexCollection = indexCollection_;
+		this.doQuery = doQuery_;
+		this.reduceQrelsDE = reduceQrelsDE_;
+		this.withPOS = withPOS_;
 
-		QueryReader qr = new QueryReader(queryMapPath);
-		LinkedList<HashMap<String, String>> myMap = new LinkedList<HashMap<String, String>>(qr.getQueries());
-		for (HashMap<String, String> tempMap : myMap) {
-			que(tempMap);
+	}
 
+	public void run() throws Exception {
+
+		if (readCollection) {
+			CollectionReader cr = new CollectionReader(pathIn, pathOut);
+			cr.initFileStreamsForAllFiles();
 		}
-
-		// transform();
-		writeResultToFile();
-		execute();
+		if (indexCollection) {
+			Initializer init = new Initializer(pathOut, urlSolr);
+			init.createCollection();
+		}
+		if (reduceQrelsDE) {
+			transform();
+		}
+		if (doQuery) {
+			QueryReader qr = new QueryReader(pathQuery);
+			LinkedList<HashMap<String, String>> myMap = new LinkedList<HashMap<String, String>>(qr.getQueries());
+			for (HashMap<String, String> tempMap : myMap) {
+				que(tempMap);
+			}
+			writeResultToFile();
+			execute();
+		}
 
 	}
 
 	private void query(String words) {
-		MyQuery mq = new MyQuery(URL);
+		MyQuery mq = new MyQuery(urlSolr);
 		int counter = 1;
 		int tempID = Integer.parseInt(queryID.substring(2, queryID.length() - 1));
 		System.out.println("qID " + tempID);
@@ -100,29 +128,77 @@ public class Test {
 
 	private void que(HashMap<String, String> myMap) throws Exception {
 		String query = "";
+		String query1 = "";
+		String query2 = "";
+		String query3 = "";
+
 		for (Map.Entry<String, String> keys : myMap.entrySet()) {
 			// System.out.println("Key: " +keys.getKey() + " Text:
 			// "+keys.getValue());
 			if (keys.getKey().equals("num")) {
 				queryID = keys.getValue();
+			} else if (keys.getKey().equals("DE-title")) {
+				query1 = keys.getValue();
+			} else if (keys.getKey().equals("DE-desc")) {
+				query2 = keys.getValue();
+			} else if (keys.getKey().equals("DE-narr")) {
+				query3 = keys.getValue();
 			}
-
-			List<String> tokenizedList = new LinkedList<String>(Tokenizer.tokenize(posTagger(keys.getValue())));
-
-			for (String str : tokenizedList) {
-				boolean b = new StopwordRemover().isStopWord(str);
-				if (!b)
-					query += str + " ";
-			}
-			System.out.println("Query words: " + query);
 
 		}
+
+		switch (queryCase) {
+
+		case (0):
+			query = query1;
+			break;
+		case (1):
+			query = query2;
+			break;
+		case (2):
+			query = query3;
+			break;
+		case (3):
+			query = query1 + " " + query2;
+			break;
+		case (4):
+			query = query1 + " " + query3;
+			break;
+		case (5):
+			query = query2 + " " + query3;
+			break;
+		case (6):
+			query = query1 + " " + query2 + " " + query3;
+			break;
+		}
+
+		String tempQuery;
+		if (withPOS) {
+			tempQuery = posTagger(query);
+		} else {
+			tempQuery = query;
+		}
+		List<String> tokenizedList = new LinkedList<String>(Tokenizer.tokenize(tempQuery));
+
+		for (String str : tokenizedList) {
+			boolean b = new StopwordRemover().isStopWord(str);
+			if (!b)
+				query += str + " ";
+		}
+		System.out.println("Query words: " + query);
+
 		query(query);
 	}
 
 	private void execute() throws IOException {
-
-		String[] eval = {"-measures", "-trecrel", "qrelsDE", "-trectop", "queryResult"};
+		String reduce;
+		if (reduceQrelsDE) {
+			reduce = "qrelsDE";
+		} else {
+			reduce = "qrels_DE";
+		}
+		String[] eval = { "-measures", "-trecrel", reduce, "-trectop", "queryResult" };
+		;
 		MiniTRECEval.main(eval);
 	}
 
@@ -178,5 +254,5 @@ public class Test {
 		}
 		writer.close();
 	}
-	
+
 }

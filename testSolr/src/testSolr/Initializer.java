@@ -30,7 +30,7 @@ import org.xml.sax.SAXException;
 
 public class Initializer {
 
-	private final String URL = "http://localhost:8983/solr/ism2017";
+	private String urlSolr;
 	private String documentFolder;
 	private List<File> files;
 	private Stream<String> lines;
@@ -39,12 +39,13 @@ public class Initializer {
 	private SolrInputDocument solrDoc;
 	private HttpSolrClient solrClient;
 
-	public Initializer(String documentFolder_) {
+	public Initializer(String documentFolder_, String urlSolr_) {
 		this.documentFolder = documentFolder_;
+		this.urlSolr = urlSolr_;
 	}
 
 	public void createCollection() throws IOException, SAXException, ParserConfigurationException {
-		solrClient = new HttpSolrClient.Builder(URL).build();
+		solrClient = new HttpSolrClient.Builder(urlSolr).build();
 		initialize();
 	}
 
